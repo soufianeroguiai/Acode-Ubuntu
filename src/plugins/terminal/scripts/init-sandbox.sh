@@ -35,16 +35,15 @@ export PROOT_TMP_DIR=$PREFIX/tmp
 
 if [ "$FDROID" = "true" ]; then
 
-    if [ -f "$PREFIX/libproot.so" ]; then
-        export PROOT_LOADER="$PREFIX/libproot.so"
+    if [ -f "$NATIVE_DIR/libproot.so" ]; then
+        export PROOT_LOADER="$NATIVE_DIR/libproot.so"
     fi
 
-    if [ -f "$PREFIX/libproot32.so" ]; then
-        export PROOT_LOADER32="$PREFIX/libproot32.so"
+    if [ -f "$NATIVE_DIR/libproot32.so" ]; then
+        export PROOT_LOADER32="$NATIVE_DIR/libproot32.so"
     fi
 
-    export PROOT="$PREFIX/libproot-xed.so"
-    chmod +x $PREFIX/*
+    export PROOT="$NATIVE_DIR/libproot-xed.so"
 else
     if [ -f "$NATIVE_DIR/libproot.so" ]; then
         export PROOT_LOADER="$NATIVE_DIR/libproot.so"
