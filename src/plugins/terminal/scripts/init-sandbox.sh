@@ -1,4 +1,4 @@
-export LD_LIBRARY_PATH=$PREFIX:$NATIVE_DIR:$NATIVE_DIR
+export LD_LIBRARY_PATH=$PREFIX:$NATIVE_DIR
 export FDROID=true
 
 # نسخ المكتبات من NATIVE_DIR إلى PREFIX إذا لم تكن موجودة
@@ -141,6 +141,11 @@ if [ "$FAILSAFE" = true ] && [ "$INSTALLING" != true ]; then
 else
     exec "$PROOT" $ARGS /bin/sh "$PREFIX/init-ubuntu.sh" "$@"
 fi
+# إنشاء رابط libtalloc.so.2 في NATIVE_DIR إذا لم يكن موجوداً
+if [ ! -f "$NATIVE_DIR/libtalloc.so.2" ] && [ -f "$NATIVE_DIR/libtalloc.so" ]; then
+    ln -sf "$NATIVE_DIR/libtalloc.so" "$PREFIX/libtalloc.so.2"
+fi
+
 # إنشاء رابط libtalloc.so.2 في NATIVE_DIR إذا لم يكن موجوداً
 if [ ! -f "$NATIVE_DIR/libtalloc.so.2" ] && [ -f "$NATIVE_DIR/libtalloc.so" ]; then
     ln -sf "$NATIVE_DIR/libtalloc.so" "$PREFIX/libtalloc.so.2"
