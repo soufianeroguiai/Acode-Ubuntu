@@ -39,7 +39,7 @@ export default class TerminalComponent {
 			scrollOnUserInput: true,
 			rows: options.rows || 24,
 			cols: options.cols || 80,
-			port: options.port || 8767,
+			port: options.port || 8768,
 			renderer: options.renderer || "auto", // 'auto' | 'canvas' | 'webgl'
 			fontSize: terminalSettings.fontSize,
 			fontFamily: terminalSettings.fontFamily,
