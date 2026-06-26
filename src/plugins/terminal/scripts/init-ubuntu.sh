@@ -2,6 +2,9 @@ export PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/share/bin:/usr/share/sbin:/usr/lo
 export PS1="\[\e[38;5;46m\]\u\[\033[39m\]@localhost \[\033[39m\]\w \[\033[0m\]\$ "
 export HOME=/public
 export TERM=xterm-256color
+export DEBIAN_FRONTEND=noninteractive
+export DEBCONF_NONINTERACTIVE_SEEN=true
+export DEBCONF_NOWARNINGS=yes
 
 INSTALLING=false
 FAILSAFE=false
@@ -33,6 +36,15 @@ if [ "$INSTALLING" != true ] && [ $# -gt 0 ] && [ "${1#--}" = "$1" ]; then
     exec "$@"
 fi
 
+# إصلاح postinst scripts غير المتوافقة مع PRoot
+for pkg in "libc6:arm64" "libc6:armhf" "libc6" "libc-bin"; do
+    script="/var/lib/dpkg/info/${pkg}.postinst"
+    if [ -f "$script" ] && grep -q "busybox\|debconf/frontend" "$script" 2>/dev/null; then
+        echo "exit 0" > "$script"
+    fi
+done
+dpkg --configure -a --force-all 2>/dev/null || true
+
 required_packages="bash tzdata wget curl"
 missing_packages=""
 
@@ -61,9 +73,7 @@ fi
 
 if [ "$INSTALLING" = true ]; then
     echo "Configuring timezone..."
-    
-    # Prevent apt from prompting for timezone
-    export DEBIAN_FRONTEND=noninteractive
+
     export TZ="UTC"
 
     if [ -n "$ANDROID_TZ" ] && [ -f "/usr/share/zoneinfo/$ANDROID_TZ" ]; then
@@ -75,6 +85,15 @@ if [ "$INSTALLING" = true ]; then
         ln -sf /usr/share/zoneinfo/UTC /etc/localtime
         echo "UTC" > /etc/timezone
     fi
+
+    # إصلاح libc6 عند التثبيت الأول
+    for pkg in "libc6:arm64" "libc6:armhf" "libc6" "libc-bin"; do
+        script="/var/lib/dpkg/info/${pkg}.postinst"
+        if [ -f "$script" ]; then
+            echo "exit 0" > "$script"
+        fi
+    done
+    dpkg --configure -a --force-all 2>/dev/null || true
 
     mkdir -p "$PREFIX/.configured"
 
@@ -156,8 +175,6 @@ open_in_acode() {
     local type="file"
     [[ -d "$path" ]] && type="folder"
     
-    # Send OSC 7777 escape sequence: \e]7777;cmd;type;path\a
-    # The terminal component will intercept and handle this
     printf '\e]7777;open;%s;%s\a' "$type" "$path"
 }
 
@@ -187,7 +204,6 @@ ACODE_CLI
     fi
 
     # Create initrc if it doesn't exist
-    #initrc runs in bash so we can use bash features 
 if [ ! -e "$PREFIX/ubuntu/initrc" ]; then
     cat <<'EOF' > "$PREFIX/ubuntu/initrc"
 # Source rc files if they exist
@@ -199,15 +215,14 @@ fi
 # Environment setup
 export PATH=$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/share/bin:/usr/share/sbin:/usr/local/bin:/usr/local/sbin
 export DEBIAN_FRONTEND=noninteractive
+export DEBCONF_NONINTERACTIVE_SEEN=true
+export DEBCONF_NOWARNINGS=yes
 
 export HOME=/public
 export TERM=xterm-256color 
 SHELL=/bin/bash
 export PIP_BREAK_SYSTEM_PACKAGES=1
 
-# Default prompt with fish-style path shortening (~/p/s/components)
-# To use custom prompts (Starship, Oh My Posh, etc.), just init them in ~/.bashrc:
-#   eval "$(starship init bash)"
 _shorten_path() {
     local path="$PWD"
     
@@ -238,7 +253,6 @@ _shorten_path() {
 
 PROMPT_COMMAND='_PS1_PATH=$(_shorten_path); _PS1_EXIT=$?'
 
-# Source user configs AFTER defaults (so user can override PROMPT_COMMAND)
 if [ -f "$HOME/.bashrc" ]; then
     source "$HOME/.bashrc"
 fi
@@ -247,8 +261,6 @@ if [ -f /etc/bash.bashrc ]; then
     source /etc/bash.bashrc
 fi
 
-
-# Display MOTD if available
 if [ -s /etc/acode_motd ]; then
     cat /etc/acode_motd
 fi
@@ -257,16 +269,12 @@ check_binary_execution() {
     local cmd="$1"
     local cmd_path=""
 
-    # Ignore shell builtins, keywords, etc.
     [[ -z "$cmd" ]] && return
 
-    # If user executed a path directly (./foo, /path/foo)
     if [[ "$cmd" == */* ]]; then
         cmd_path="$(realpath "$cmd" 2>/dev/null)"
     else
         cmd_path="$(command -v "$cmd" 2>/dev/null)"
-
-        # Resolve symlinks/relative paths
         if [[ -n "$cmd_path" ]]; then
             cmd_path="$(realpath "$cmd_path" 2>/dev/null)"
         fi
@@ -298,15 +306,11 @@ Then run the binary again.
 }
 
 _acode_preexec() {
-    # Skip commands executed by the trap itself
     [[ "$BASH_COMMAND" == trap* ]] && return
-
     local cmd="${BASH_COMMAND%% *}"
     check_binary_execution "$cmd"
 }
 
-# Preserve any existing DEBUG trap and append our handler instead of overwriting it.
-# This avoids clobbering user-installed preexec hooks (starship, fzf, bash-preexec, etc.).
 __acode_existing_debug_trap="$(trap -p DEBUG 2>/dev/null)"
 if [[ -n "${__acode_existing_debug_trap}" ]]; then
     __acode_existing_cmd="$(printf "%s" "${__acode_existing_debug_trap}" | sed -E "s/.*'((.*)?)'.*/\1/")"
@@ -314,7 +318,6 @@ else
     __acode_existing_cmd=""
 fi
 
-# Only add our handler if it's not already present
 if [[ "${__acode_existing_cmd}" != *"_acode_preexec"* ]]; then
     if [[ -n "${__acode_existing_cmd}" ]]; then
         trap "${__acode_existing_cmd}; _acode_preexec" DEBUG
@@ -324,7 +327,6 @@ if [[ "${__acode_existing_cmd}" != *"_acode_preexec"* ]]; then
 fi
 unset __acode_existing_debug_trap __acode_existing_cmd
 
-# Command-not-found handler
 command_not_found_handle() {
     cmd="$1"
     pkg=""
@@ -345,17 +347,12 @@ command_not_found_handle() {
 EOF
 fi
 
-# Add PS1 only if not already present
 if ! grep -q 'PS1=' "$PREFIX/ubuntu/initrc"; then
-    # Smart path shortening (fish-style: ~/p/s/components)
     echo 'PS1="\[\033[1;32m\]\u\[\033[0m\]@localhost \[\033[1;34m\]\$_PS1_PATH\[\033[0m\] \[\$([ \$_PS1_EXIT -ne 0 ] && echo \"\033[31m\")\]\$\[\033[0m\] "' >> "$PREFIX/ubuntu/initrc"
 fi
-
 
 chmod +x "$PREFIX/ubuntu/initrc"
 
 if [ "$FAILSAFE" != true ]; then
-    #actual source
-    #everytime a terminal is started initrc will run
     "$PREFIX/axs" -c "bash --rcfile /initrc -i"
 fi
