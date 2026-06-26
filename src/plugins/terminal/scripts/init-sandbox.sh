@@ -1,6 +1,13 @@
 export LD_LIBRARY_PATH=$PREFIX
 export FDROID=true
 
+# نسخ المكتبات من NATIVE_DIR إلى PREFIX إذا لم تكن موجودة
+for lib in libproot-xed.so libproot.so libproot32.so libtalloc.so libaxs.so; do
+    if [ ! -f "$PREFIX/$lib" ] && [ -f "$NATIVE_DIR/$lib" ]; then
+        cp "$NATIVE_DIR/$lib" "$PREFIX/$lib"
+        chmod +x "$PREFIX/$lib"
+    fi
+done
 mkdir -p "$PREFIX/tmp"
 mkdir -p "$PREFIX/ubuntu/tmp"
 mkdir -p "$PREFIX/public"
