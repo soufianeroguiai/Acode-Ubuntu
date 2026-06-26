@@ -15,7 +15,6 @@ move_all() {
 
     [ -d "$SRC" ] || return 0
 
-    # Only continue if directory is not empty
     [ "$(find "$SRC" -mindepth 1 -maxdepth 1 | head -n 1)" ] || return 0
 
     find "$SRC" -mindepth 1 -maxdepth 1 -exec mv -f {} "$DEST"/ \;
@@ -36,7 +35,6 @@ if [ "$FDROID" = "true" ]; then
         export PROOT_LOADER32="$PREFIX/libproot32.so"
     fi
 
-
     export PROOT="$PREFIX/libproot-xed.so"
     chmod +x $PREFIX/*
 else
@@ -48,7 +46,6 @@ else
         export PROOT_LOADER32="$NATIVE_DIR/libproot32.so"
     fi
 
-
     if [ -e "$PREFIX/libtalloc.so.2" ] || [ -L "$PREFIX/libtalloc.so.2" ]; then
         rm "$PREFIX/libtalloc.so.2"
     fi
@@ -59,8 +56,6 @@ fi
 
 ARGS="--kill-on-exit"
 
-
-
 for system_mnt in /apex /odm /product /system /system_ext /vendor /linkerconfig/ld.config.txt /linkerconfig/com.android.art/ld.config.txt /plat_property_contexts /property_contexts; do
 
  if [ -e "$system_mnt" ]; then
@@ -68,9 +63,6 @@ for system_mnt in /apex /odm /product /system /system_ext /vendor /linkerconfig/
   ARGS="$ARGS -b ${system_mnt}"
  fi
 done
-
-
-
 
 unset system_mnt
 
@@ -88,7 +80,6 @@ ARGS="$ARGS -b $PREFIX/public:/home"
 ARGS="$ARGS -b $PREFIX/public:/root"
 ARGS="$ARGS -b $PREFIX/ubuntu/tmp:/dev/shm"
 
-
 if [ -e "/proc/self/fd" ]; then
   ARGS="$ARGS -b /proc/self/fd:/dev/fd"
 fi
@@ -105,13 +96,11 @@ if [ -e "/proc/self/fd/2" ]; then
   ARGS="$ARGS -b /proc/self/fd/2:/dev/stderr"
 fi
 
-
 ARGS="$ARGS -r $PREFIX/ubuntu"
 ARGS="$ARGS -0"
 ARGS="$ARGS --link2symlink"
 ARGS="$ARGS --sysvipc"
 ARGS="$ARGS -L"
-
 
 FAILSAFE=false
 INSTALLING=false
@@ -126,6 +115,11 @@ for arg in "$@"; do
             ;;
     esac
 done
+
+# منع dpkg من تشغيل واجهات تفاعلية
+export DEBIAN_FRONTEND=noninteractive
+export DEBCONF_NONINTERACTIVE_SEEN=true
+export DEBCONF_NOWARNINGS=yes
 
 if [ "$FAILSAFE" = true ] && [ "$INSTALLING" != true ]; then
     echo "$$" > "$PREFIX/pid"
