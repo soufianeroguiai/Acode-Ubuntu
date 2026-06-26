@@ -1,4 +1,5 @@
 export LD_LIBRARY_PATH=$PREFIX
+export FDROID=true
 
 mkdir -p "$PREFIX/tmp"
 mkdir -p "$PREFIX/ubuntu/tmp"
