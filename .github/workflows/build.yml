@@ -45,7 +45,7 @@ jobs:
           npm run build paid dev apk
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: acode-ubuntu
           path: platforms/android/app/build/outputs/apk/debug/app-debug.apk
