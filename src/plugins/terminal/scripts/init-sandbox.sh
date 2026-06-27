@@ -5,6 +5,9 @@ export FDROID=true
 for lib in libproot-xed.so libproot.so libproot32.so libtalloc.so libaxs.so; do
     if [ ! -f "$PREFIX/$lib" ] && [ -f "$NATIVE_DIR/$lib" ]; then
         cp "$NATIVE_DIR/$lib" "$PREFIX/$lib"
+        if [ "$lib" = "libtalloc.so" ]; then
+            ln -sf "$PREFIX/libtalloc.so" "$PREFIX/libtalloc.so.2"
+        fi
         chmod +x "$PREFIX/$lib"
     fi
 done
